@@ -1,0 +1,102 @@
+#slides {
+	float:left;
+	width:610px;
+	height:400px;
+	position:relative;
+	z-index:0;
+}
+.slides {
+	position:absolute;
+	top:0px;
+	left:0px;
+	z-index:100;
+	
+}
+.slides_container {
+	width:610px;
+	height:352px;
+	overflow:hidden;
+	position:relative;
+	border:1px solid #FFF;
+	border-radius:5px;
+	box-shadow: 0px 1px 1px #c6afc4;
+}
+#slides .next,#slides .prev {
+	position:absolute;
+	top:70px;
+	left:10px;
+	width:44px;
+	height:127px;
+	display:block;
+	z-index:101;
+	background:url(../img/control_sprite.png) no-repeat;	
+}
+#slides .prev {
+	background-position: 0 -130px;
+}
+
+#slides .prev:hover {
+  background-position: -49px -130px;
+}
+#slides .next {
+  background-position: 0 0;
+}
+#slides .next:hover {
+	background-position: -54px 0;
+}
+#slides .next {
+	left:555px;
+}
+
+.pagination {
+	position:relative;
+	list-style:none;
+	margin:10px auto;
+	width:200px;
+}
+
+.pagination li {
+	float:left;
+	margin:0 1px;
+}
+
+.pagination li a {
+	display:block;
+	width:22px;
+	height:22px;
+	background:url(../img/content/slider_button.png) no-repeat -20px 0 ;
+	overflow:hidden;
+	text-indent:-9999px;
+}
+
+.pagination li.current a {
+background:url(../img/content/slider_button.png) no-repeat 4px 0 ;
+}
+.caption {
+	position:absolute;
+	top:240px;
+	left:0;
+	background:#fff;
+	opacity:0.8;
+	width:475px;
+	height: auto;
+	padding:10px 20px 20px 20px;
+	border-radius:3px;
+	
+}
+.caption span {
+	position:relative;
+	display:block;
+	margin-bottom:5px;
+	font-size:18px;
+	font-family:Arial, Helvetica, sans-serif;
+	color:#323232;
+	
+}
+.caption p{
+	position:relative;
+	font-size:12px;
+	font-family:Arial, Helvetica, sans-serif;
+	color:#323232;
+	
+}

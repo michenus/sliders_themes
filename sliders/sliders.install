@@ -1,0 +1,44 @@
+<?php
+/**
+ * @file
+ * Файл установки и удаления слайдера
+ * 
+ * Здесь создаются и удаляются все переменные в базе данных
+ */
+/**
+ * Implements hook_install().
+ */
+function sliders_install() {
+  /* Устанавливаем новые начальные переменные */
+  // Начальное количество изображений
+  variable_set('sliders_img_count', 0);
+  // Начальный стиль изображения large - встроенные
+  variable_set('sliders_img_style', 'large');
+  // Показывать превью - начальное значение: ДА
+  variable_set('sliders_previews', 1);
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function sliders_uninstall() {
+  // Начальное количество изображений
+  $sliders_img_count = variable_get('sliders_img_count', 0);
+  // Если количество изображений больше нуля, то удаляем все текущие переменные и файлы
+  if ($sliders_img_count > 0) {
+    for ($i = 1; $i <= $sliders_img_count; $i++) { 
+      $file = file_load(variable_get('slidres_img_' . $i));
+      file_delete($file);
+      variable_del('slidres_img_' . $i); 
+      variable_del('sliders_descriptoin_' . $i);
+      variable_del('sliders_link_' . $i);
+    }
+  }
+  // Удаление переменной стиля
+  variable_del('sliders_img_style');
+  // Удалите значение показывать или нет превью
+  variable_del('sliders_previews');
+  // Удалить запись о количестве изображений в слайдере
+  variable_del('sliders_img_count');
+}

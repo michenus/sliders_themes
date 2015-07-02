@@ -1,0 +1,13 @@
+name = Sliders block
+description = Создание блока слайдера. Создаёт блок со слайдером, подключая нужные стили и скрипты из папки с модулем. Количество изображений не ограницено.<br/>Удобный интерфейс, с показам превью изображений. Изображения сохраняются и удаляются (если вы нажмёте кнопку "удалить")  
+core = 7.x
+version = 1.0
+
+files[] = css/sliders.css
+files[] = js/slides.min.jquery.js
+files[] = js/sliders.js
+
+dependencies[] = variable
+
+configure = admin/structure/sliders
+package = Специальный

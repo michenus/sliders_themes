@@ -1,0 +1,130 @@
+<?php
+/**
+ * @file 
+ */
+
+/**
+ * Реализуем hook_help()
+ */
+function sliders_help($path, $arg) {
+  switch ($path) {
+    case 'admin/advanced_help/sliders':
+      return t('Здесь вы можете настроить блок слайдера. Загружать изображения и описания к ним. Добавьте к каждому элементу слайдера заголовок, ссылку и описанию.');
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function sliders_menu() {
+  /*
+   *$items['blog'] = array(
+   *  'title' => 'blogs',
+   *  'page callback' => 'blog_page',
+   *  'access arguments' => array('access content'),
+   *  'type' => MENU_SUGGESTED_ITEM,
+   *);
+   */
+  $items['admin/structure/sliders'] = array(
+    'title' => 'Настройка слайдера',
+    'discription' => 'Добавьте изображение, описание к ней и ссылку.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_slider_settings_form'),
+    'access arguments' => array('create page content'),
+    //'type' => MENU_SUGGESTED_ITEM,
+    'file' => 'sliders.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function sliders_theme($existing, $type, $theme, $path) {
+  return array(
+    'sliders_block' => array(
+      //'render element' => 'elements',
+      'variables' => array('elements' => NULL),
+      'template'  => 'sliders-block',
+    ),
+  );
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function sliders_block_info() {
+
+  $blocks['sliders'] = array(
+    'info' => t('Слайдер с настройками изображений'),
+    'cache' => DRUPAL_NO_CACHE
+  );
+
+  return $blocks;
+}
+
+
+/**
+ * Implements hook_block_view().
+ */
+function sliders_block_view($delta = '') {
+  $block = array();
+  // Добавляем стили и js для блока слайдера
+  $path_to_module = drupal_get_path('module', 'sliders');
+  // Загрузим в блок нужные элементы
+  $elements['elements'] = array();
+  $sliders_img_count = variable_get('sliders_img_count', 0);
+  for ($i = 1; $i <= $sliders_img_count; $i++) { 
+    $elements['elements'][$i]['img_fid'] = variable_get('slidres_img_' . $i, NULL);
+    $elements['elements'][$i]['description']  = variable_get('sliders_descriptoin_' . $i, '');
+    $elements['elements'][$i]['link'] = variable_get('sliders_link_' . $i, '');
+    $file = file_load($elements['elements'][$i]['img_fid']);
+    //drupal_set_message('<pre>' . print_r( $file, 1) . '</pre>');
+    $elements['elements'][$i]['url_img'] = file_create_url($file->uri);
+     //$string = preg_replace('/\s[^\s]+$/', '', substr(check_plain($elements['elements'][$i]['description']), 0, 20));
+    $elements['elements'][$i]['render_img'] = theme('image_style', array(
+      'style_name' => variable_get('sliders_img_style', 'large'),
+      'path'       => $file->uri,
+        'alt'        => $elements['elements'][$i]['description'],
+        'title'      => $elements['elements'][$i]['description'],
+      )
+    );
+ }
+
+  switch ($delta) {
+     case 'sliders':
+      $block['subject'] = t('Слайдер');
+      $block['content'] = theme('sliders_block', $elements);
+      break;
+  }
+
+  drupal_add_css($path_to_module . '/css/sliders.css', array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+  drupal_add_js('/' . $path_to_module . '/js/slides.min.jquery.js', 'file');
+  drupal_add_js('/' . $path_to_module . '/js/sliders.js', 'file');
+
+  return $block;
+}
+
+
+/**
+ * Implements hook_contextual_links_view_alter().
+ */
+function sliders_contextual_links_view_alter(&$element, &$items) {
+  // Add another class to all contextual link lists to facilitate custom
+  // styling.
+  /*
+   *$element['#attributes']['class'][] = 'custom-class';
+   */ 
+//drupal_set_message($message = $element['#element']['#block']->delta, $type = 'status');
+  if (isset($element['#element']['#block']) && $element['#element']['#block']->delta == "sliders") {
+
+        $element['#links']['img'] = array(
+            'title' => t('Настройка изображений блока'),
+            'href' => url('/admin/structure/sliders', array('absolute' => TRUE)),
+        );
+    }
+}
+
+
+
