@@ -13,12 +13,13 @@
  * @see system_settings_form
  */
 function _slider_settings_form() {
-
- $sliders_previews = variable_get('sliders_previews', 1);
-
- $sliders_img_count = variable_get('sliders_img_count', 0);
-
- // Wrap global setting fieldsets in vertical tabs.
+  //показывать ли превью при просмотре
+  $sliders_previews = variable_get('sliders_previews', 1);
+  //количество записей в таблице со слайдером
+  $query = db_select('sliders_themes');
+  $query->addExpression('COUNT(*)');
+  $sliders_img_count = $query->execute()->fetchField();
+  // Wrap global setting fieldsets in vertical tabs.
   $form['general'] = array(
     '#type' => 'vertical_tabs',
     '#prefix' => '<h2><small>' . t('Настройки блока слайдера!') . '</small></h2>',
@@ -40,8 +41,6 @@ function _slider_settings_form() {
   );
 
   $styles = image_styles();
-
-//drupal_set_message('<pre>' . print_r($styles, 1) . '</pre>');
   $options_style = array();
   foreach ($styles as $key => $style) {
     $options_style[$key] = $style['label'];
@@ -62,75 +61,86 @@ function _slider_settings_form() {
     '#suffix' => '<span>' . t('Количество изображений: @count',  array('@count' => $sliders_img_count)) . '</span>',
     '#submit' => array('_sliders_add_img'), //Если отключен ajax
   );
-
-  //Отображение всех изображений, если их больше одного 
-  if ($sliders_img_count > 0) {
-    for ($i = 1; $i <= $sliders_img_count ; $i++) { 
-      // Глобальные настройки (выбор стиля изображения, ).
-      $form['sliders_img_' . $i] = array(
+  //Получение списка изображений и данных по ним
+  $slider_images = db_select('sliders_themes', 'si')
+                    ->fields('si')
+                    ->orderBy('si.slider_weight', 'ASC')
+                    ->execute()
+                    ->fetchAll();
+  $index = 1;
+  foreach ($slider_images as $key => $s_img) {
+   // Глобальные настройки (выбор стиля изображения, ).
+      $form['sliders_img_' . $index] = array(
         '#type' => 'fieldset',
-        '#title' => t('@img изображение', array('@img' => $i)),
+        '#title' => t('@img изображение', array('@img' => $index)),
         '#group' => 'general',
       );
-
       // Показываем превью, если изображение загружено или поставлен пункт "показывать превью"
       // проверим, загружено ли изображение
-      $img_preview = variable_get('slidres_img_' . $i, NULL);
-      
+      $img_preview = $s_img->slider_image_id;//;variable_get('slidres_img_' . $i, NULL);
+      $form['sliders_img_' . $index]['sliders_weight_' . $index] = array(
+          '#type' => 'weight',
+          '#title' => t('Вес изображения.'),
+          '#default_value' => $s_img->slider_weight,
+          '#delta' => 10,
+          '#description' => t('Очередь изображения, чем больше - тем дальше в очереди.'),
+      );
       if ($sliders_previews && $img_preview != NULL) {
          // опции загрузки изображения
         $file_img = file_load($img_preview);
-         $form['sliders_img_' . $i]['preview_' . $i] = array(
+         $form['sliders_img_' . $index]['preview_' . $index] = array(
           '#type' => 'html_tag',
           '#tag' => 'div',
           '#value' => theme('image_style', array(
                         'style_name' => variable_get('sliders_img_style', 'large'),
                         'path'       => $file_img->uri,
-                        'alt'        => t('Превью'),
-                        'title'      => t('Превью'),
+                        'alt'        => t('Превью изображения № @img', array('@img' => $index) ),
+                        'title'      => t('Превью изображения № @img', array('@img' => $index) ), 
                     )),
           );
       }// Превью
+
+
       // Загрузчик изображения 
-      $form['sliders_img_' . $i]['slider_file_' . $i] = array(
+      $form['sliders_img_' . $index]['slider_file_' . $index] = array(
         '#type' => 'managed_file',
-        '#title' => t('Загрузить/изменить изображение № @img', array('@img' => $i) ),
+        '#title' => t('Загрузить/изменить изображение № @img', array('@img' => $index) ),
         '#description' => t('Измените или загрузите текущие изображание'),
         '#default_value' => ($img_preview != NULL) ? $img_preview : 0,
         '#upload_location' => 'public://sliders/',
         '#upload_validators' => array(
             'file_validate_extensions' => array('gif png jpg jpeg'),
             // Pass the maximum file size in bytes
-            'file_validate_size' => array(2048),
+            'file_validate_size' => array(2 * 1024 * 1024),
         ),
       );
+
       //Остальной описание
-      $form['sliders_img_' . $i]['sliders_descriptoin_' . $i] = array(
-        '#title' => t('Описание изображения'),
-        '#type' => 'textarea',
-        '#description' => t('Добавьте описание изображения, оно будет использоваться ввиде описание к элементу слайдера и к описанию изображения'),
-        '#default_value' => variable_get('sliders_descriptoin_' . $i, ''),
-      );
-      $form['sliders_img_' . $i]['sliders_link_' . $i] = array(
-        '#title' => t('Ссылка изображения'),
-        '#type' => 'textfield',
-        '#description' => t('Добавьте ссылку для элемента слайдера. Она используется в тексте "подробнее". Если начинается с // - то выводиться как глобальная ссылка. Если без первого слеша - как локальная. Например: "//vk.com" выведит как есть, а vk.com выведет как /vk.com.'),
-        '#default_value' => variable_get('sliders_link_' . $i, ''),
-      );
-      // Сохранить текущий номер изображения с помощью скрытого поля формы
-       $form['sliders_img_' . $i]['number'] = array('#type' => 'hidden', '#value' => $i);
-           // Кнопка удаление изображения
-       $form['sliders_img_' . $i]['delete'] = array(
+        $form['sliders_img_' . $index]['sliders_descriptoin_' . $index] = array(
+          '#title' => t('Описание изображения'),
+          '#type' => 'textarea',
+          '#description' => t('Добавьте описание изображения, оно будет использоваться в описание элемента слайдера.'),
+          '#default_value' => $s_img->slider_description,
+        );
+        $form['sliders_img_' . $index]['sliders_link_' . $index] = array(
+          '#title' => t('Ссылка изображения'),
+          '#type' => 'textfield',
+          '#description' => t('Добавьте ссылку для элемента слайдера. Она используется в тексте "подробнее". Если начинается с // - то выводиться как глобальная ссылка. Если без первого слеша - как локальная. Например: "//vk.com" выведит как есть, а vk.com выведет как /vk.com.'),
+          '#default_value' => $s_img->slider_link,
+        );
+       // Сохранить текущий номер изображения с помощью скрытого поля формы
+       $form['sliders_img_' . $index]['number_' . $index] = array('#type' => 'hidden', '#value' => $index);
+       $form['sliders_img_' . $index]['slider_id_' . $index] = array('#type' => 'hidden', '#value' => $s_img->id);
+       // Кнопка удаление изображения
+       $form['sliders_img_' . $index]['delete'] = array(
         '#type' => 'submit',
-        '#name' => 'delete_img_' . $i,
+        '#name' => 'delete_img_' . $index,
         '#value' => t('Удалить изображение'),
         '#submit' => array('_sliders_delete_img'), //
        );
-    }//вывод изображений
-  }//Условия, чтобы изображений было большей нуля
 
-
-
+      $index++;
+  }
 
   $form['submit']  = array(
     '#type' => 'submit',
@@ -140,66 +150,48 @@ function _slider_settings_form() {
   );
 
   $form['#attributes'] = array('id' => 'slider_settings_form');
-  //$form['#validate'][] = '_slider_settings_form_validate';
-
+  $form['link'] = array(
+    '#markup' => '<a href="/admin/structure/sliders/preview">' . t('Превью') . '<a>', 
+    );
   return $form;
 }
-
 
 /**
  * Функция добавления изображения в слайдер
  */
 function _sliders_add_img($form, &$form_state) {
-
-  $sliders_img_count = variable_get('sliders_img_count', 0);
-  // Увеличиваем количество изображений
-  $sliders_img_count++; 
-  // Пересохраняем количество изображений
-  variable_set('sliders_img_count', $sliders_img_count);
+  // Добавляем пустой слайдер
+  db_insert('`sliders_themes`')
+  ->fields(array('slider_image_id', 'slider_description', 'slider_link', 'slider_weight'))
+  ->values(array(
+      'slider_image_id' => NULL,
+      'slider_description' => '',
+      'slider_link' => '',
+      'slider_weight' => 0
+      ))
+  ->execute();
   // Обновляем форму
   $form_state['rebuild'] = TRUE;
   drupal_set_message( t('Изображение добавлено') );
 
 }
 
-//hook_form
 /**
  * Реализуем удаление изображения
  */
-
 function _sliders_delete_img($form, &$form_state) {
   $values = $form_state['values'];
-  // Узнаём текущий номер изображения использую работу со строками
-  $number = str_replace('edit-sliders-img-', '', $values['general__active_tab']);
-
-  $sliders_img_count = variable_get('sliders_img_count', 0);
-  // Сохранить  fid удаляемого изображения
-  $img_fid = variable_get('slidres_img_' . $number, NULL);
-  // Передалываем структуру
-  for ($i = $number; $i < $sliders_img_count; $i++) { 
-    $next = $i + 1;
-    // Получаем следующиее значение
-    $next_img_fid = variable_get('slidres_img_' . $next, NULL); 
-    $next_description = variable_get('sliders_descriptoin_' . $next, '');
-    $next_link = variable_get('sliders_link_' . $next, '');
-    // Заменя текущего значения следующим
-    variable_set('slidres_img_' . $i, $next_img_fid); 
-    variable_set('sliders_descriptoin_' . $i, $next_description);
-    variable_set('sliders_link_' . $i, $next_link);
+  //dpm( $values['slider_id'] ) ;
+  //$slider_id = (int)$values['slider_id'];
+  $number_img = str_replace('edit-sliders-img-', '', $values['general__active_tab']);
+  $slider_id = (int)$values['slider_id_' . $number_img];
+  try {
+      db_delete('`sliders_themes`')
+      ->condition( 'id',  $slider_id)
+      ->execute();
+  } catch (Exception $e) {
+    drupal_set_message( t('Ошибка работы с базой данных.'), 'error' );
   }
-  //Удаление последнего элемента, который совпадает с предпоследним
-  // Удалим файл
-  $file = file_load(  $img_fid );
-  file_delete( $file );
-  // Удалим все настройки из таблицы переменных variable
-  variable_del('slidres_img_' . $sliders_img_count);
-  variable_del('sliders_descriptoin_' . $sliders_img_count);
-  variable_del('sliders_link_' . $sliders_img_count);
-
-  //Уменьшаем количество изображений 
-  $sliders_img_count--;
-  variable_set('sliders_img_count', $sliders_img_count);
-
   drupal_set_message( t('Выбранное изображение удалено') );
 }
 
@@ -208,28 +200,45 @@ function _sliders_delete_img($form, &$form_state) {
  */
 function _slider_settings_form_submit($form, $form_state) {
   $values = $form_state['values'];
-  //drupal_set_message('<pre>' . print_r( $values, 1) . '</pre>');
-  //drupal_set_message('<pre>' . print_r( $form_state, 1) . '</pre>');
-  $sliders_img_count = variable_get('sliders_img_count', 0);
+  $settings = count($form_state['groups']['general']) - 2;
 
-   for ($i = 1; $i <= $sliders_img_count; $i++) { 
+  variable_set('sliders_previews', $values['preview']);
+  variable_set('sliders_img_style', $values['styles']);
 
-      variable_set('slidres_img_' . $i, $values['slider_file_' . $i]); 
-      variable_set('sliders_descriptoin_' . $i, $values['sliders_descriptoin_' . $i]);
-      variable_set('sliders_link_' . $i, $values['sliders_link_' . $i]);
-      // Сохранение изображения
-      $fid = variable_get('slidres_img_' . $i, 0); 
-      $file = file_load( $fid );
+  for ($i=1; $i <= $settings; $i++) { 
+     // значение id изображения в базе
+     $slider_id = (int) $values['slider_id_' . $i];
+      // Сохранение изображения 
+     // новое значение веса
+     $sliders_weight = (int) $values['sliders_weight_' . $i];
+     // новое значен(ие ид файла
+     $slider_file = ( $values['slider_file_' . $i] == '0') ? NULL : (int) $values['slider_file_' . $i];
+
+     // новое значение описания
+     $sliders_descriptoin  = $values['sliders_descriptoin_' . $i];
+     // новое значение ссылки
+     $sliders_link  = $values['sliders_link_' . $i];
+    
+      $file = file_load( $slider_file );
         // Если статус действительно "Временно", то...
         if ($file->status == 0) {
           // Устанавливаем нормальный статус.
           $file->status = FILE_STATUS_PERMANENT;
           // Сохраняем наш файл.
           file_save($file);
-          file_usage_add($file, 'sliders', 'sliders-' . $i, $fid);
+          file_usage_add($file, 'sliders', 'sliders-' . $i, $slider_file);
         }
-   }
-   variable_set('sliders_previews', $values['preview']);
-   variable_set('sliders_img_style', $values['styles']);
+
+        db_update('`sliders_themes`')
+        ->fields(array(
+          'slider_image_id' => $slider_file,
+          'slider_description' => $sliders_descriptoin,
+          'slider_link' => $sliders_link,
+          'slider_weight' => $sliders_weight,
+          ))
+        ->condition('id', $slider_id)
+        ->execute();
+  }
+  
    drupal_set_message( t('Изменения сохранились') );
 }
