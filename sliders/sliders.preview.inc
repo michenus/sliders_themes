@@ -11,6 +11,6 @@
 */
 function _slider_settings_preview() {
    $block = block_load('sliders', 'sliders');      
-   $output = drupal_render(_block_get_renderable_array(_block_render_blocks(array($block)))); 
-   return $output;
+   $output =_block_get_renderable_array(_block_render_blocks(array($block))); 
+   return  drupal_render($output);
 }
